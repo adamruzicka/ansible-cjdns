@@ -1,0 +1,267 @@
+{
+    // Private key:
+    // Your confidentiality and data integrity depend on this key, keep it secret!
+    "privateKey": "{{ privateKey }}",
+
+    // This key corresponds to the public key and ipv6 address:
+    "publicKey": "{{ publicKey }}",
+    "ipv6": "{{ ipv6 }}",
+
+    // Anyone connecting and offering these passwords on connection will be allowed.
+    //
+    // WARNING: If a "login" parameter is passed, someone sniffing on the wire can
+    //          sniff the packet and crack to find it. If the "login" is not passed
+    //          then the hash of the 'password' is effectively the login, therefore
+    //          that can be cracked.
+    //
+    "authorizedPasswords":
+    [
+        // A unique string which is known to the client and server.
+        // Specify an optional user to identify the peer locally.
+        // It is not used for authentication.
+{% if authorizedPasswords %}
+{% for pass in authorizedPasswords %}
+        {"password": "{{ pass['password'] }}", "user": "{{ pass['user'] }}"}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% endif %}
+
+        // More passwords should look like this.
+        // {"password": "1rdx7ffg6y9376d6gct3dhnqm3cmtch", "user": "my-second-peer"},
+        // {"password": "zf4pstdjvr2qkcbcsf0phqx8p6s0bbm", "user": "my-third-peer"},
+        // {"password": "rszgq8bd64vmpth803s3cdqq10c6guw", "user": "my-fourth-peer"},
+
+        // Below is an example of your connection credentials
+        // that you can give to other people so they can connect
+        // to you using your default password (from above).
+        // The login field here yourself to your peer and the peerName field
+        // is the name the peer which will be displayed in peerStats
+        // Adding a unique password for each peer is advisable
+        // so that leaks can be isolated.
+    ],
+
+    // Settings for administering and extracting information from your router.
+    // This interface provides functions which can be called through a UDP socket.
+    // See admin/Readme.md for more information about the API and try:
+    // ./tools/cexec
+    // For a list of functions which can be called.
+    // For example: ./tools/cexec 'memory()'
+    // will call a function which gets the core's current memory consumption.
+    // ./tools/cjdnslog
+    // is a tool which uses this admin interface to get logs from cjdns.
+    "admin":
+    {
+        // Port to bind the admin RPC server to.
+        "bind": "{{ admin['bind'] }}",
+
+        // Password for admin RPC server.
+        // This is a static password by default, so that tools like
+        // ./tools/cexec can use the API without you creating a
+        // config file at ~/.cjdnsadmin first. If you decide to
+        // expose the admin API to the network, change the password!
+        "password": "{{ admin['password'] }}"
+    },
+
+    // Interfaces to connect to the switch core.
+    "interfaces":
+    {
+        // The interface which connects over UDP/IP based VPN tunnel.
+        "UDPInterface":
+        [
+            /*
+            {
+                // Bind to this port.
+                "bind": "0.0.0.0:44067",
+
+                // Nodes to connect to (IPv4 only).
+                "connectTo":
+                {
+                    // Add connection credentials here to join the network
+                    // If you have several, don't forget the separating commas
+                    // They should look like:
+                    // "ipv4 address:port": {
+                    //     "login": "(optional) name your peer has for you"
+                    //     "password": "password to connect with",
+                    //     "publicKey": "remote node key.k",
+                    //     "peerName": "(optional) human-readable name for peer"
+                    // },
+                    // Ask somebody who is already connected.
+            }
+            */
+{% for interface in interfaces['UDPInterface'] %}
+            {
+                "bind": "{{ interface['bind'] }}",
+                "connectTo":
+                {
+{% for ip, params in interface['connectTo'].iteritems() %}
+{% if params['publicKey'] != publicKey %}
+                    "{{ ip }}": {
+{% for key in ['login', 'peerName', 'password', 'publicKey'] %}
+{% if params[key] is defined %}
+                        "{{ key }}": "{{ params[key] }}"{% if not loop.last %},{% endif %}
+{% endif %}
+
+{% endfor %}
+                    }{% if not loop.last %},{% endif %}
+{% endif %}
+
+{% endfor %}
+                }
+            },
+{% endfor %}
+        ]
+
+        "ETHInterface":
+        [
+            // Alternatively bind to just one device and either beacon and/or
+            // connect to a specified MAC address
+{% for interface in interfaces['ETHInterface'] %}
+            {
+                "bind": "{{ interface['bind'] }}",
+                "beacon": "{{ interface['beacon'] }}",
+                "connectTo": {
+{% for addr, params in interface['connectTo'].iteritems() %}
+                    "{{ addr }}": {
+                        "password": "{{ params['password'] }}",
+                        "publicKey": "{{ params['publicKey'] }}"
+                    }{% if not loop.last %},{% endif %}
+{% endfor %}
+                }
+            }
+{% endfor %}
+        ]
+
+    },
+
+    // Configuration for the router.
+    "router":
+    {
+        // The interface which is used for connecting to the cjdns network.
+        "interface":
+        {
+            // The type of interface (only TUNInterface is supported for now)
+            "type": "{{ router['interface']['type'] }}"
+
+            // The name of a persistent TUN device to use.
+            // This for starting cjdroute as its own user.
+            // *MOST USERS DON'T NEED THIS*
+{% if router['interface']['tunDevice'] is defined %}
+            "tunDevice": "{{ router['interface']['tunDevice'] }}"
+{% else %}
+            //"tunDevice": "tun0"
+{% endif %}
+        },
+
+        // System for tunneling IPv4 and ICANN IPv6 through cjdns.
+        // This is using the cjdns switch layer as a VPN carrier.
+        "ipTunnel":
+        {
+            // Nodes allowed to connect to us.
+            // When a node with the given public key connects, give them the
+            // ip4 and/or ip6 addresses listed.
+            "allowedConnections":
+            [
+                // Give the client an address on 192.168.1.0/24, and an address
+                // it thinks has all of IPv6 behind it.
+                // {
+                //     "publicKey": "f64hfl7c4uxt6krmhPutTheRealAddressOfANodeHere7kfm5m0.k",
+                //     "ip4Address": "192.168.1.24",
+                //     "ip4Prefix": 24,
+                //     "ip6Address": "2001:123:ab::10",
+                //     "ip6Prefix": 0
+                // },
+
+                // It's ok to only specify one address.
+{% for conn in router['ipTunnel']['allowedConnections'] %}
+                {
+{% for attr in ['publicKey', 'ip4Address', 'ip4Prefix', 'ip6Address', 'ip6Prefix'] %}
+{% if conn[attr] is defined %}
+                    "{{ attr }}": "{{ conn[attr] }}"{% if not loop.last %},{% endif %}
+{% endif %}
+
+{% endfor %}
+                }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+            ],
+
+            "outgoingConnections":
+            [
+                // Connect to one or more machines and ask them for IP addresses.
+{% for conn in router['ipTunnel']['outgoingConnections'] %}
+                "{{ conn }}"{% if not loop.last %},{% endif %}
+
+{% endfor %}
+            ]
+        }
+    },
+
+    // Dropping permissions.
+    // In the event of a serious security exploit in cjdns, leak of confidential
+    // network traffic and/or keys is highly likely but the following rules are
+    // designed to prevent the attack from spreading to the system on which cjdns
+    // is running.
+    // Counter-intuitively, cjdns is *more* secure if it is started as root because
+    // non-root users do not have permission to use chroot or change usernames,
+    // limiting the effectiveness of the mitigations herein.
+    "security":
+    [
+        // Change the user id to sandbox the cjdns process after it starts.
+        // If keepNetAdmin is set to 0, IPTunnel will be unable to set IP addresses
+        // and ETHInterface will be unable to hot-add new interfaces
+        // Use { "setuser": 0 } to disable.
+        // Default: enabled with keepNetAdmin
+        { "setuser": "{{ security['setuser'] }}", "keepNetAdmin": {{ security['keepNetAdmin']}} },
+
+        // Chroot changes the filesystem root directory which cjdns sees, blocking it
+        // from accessing files outside of the chroot sandbox, if the user does not
+        // have permission to use chroot(), this will fail quietly.
+        // Use { "chroot": 0 } to disable.
+        // Default: enabled (using "/var/run")
+        { "chroot": "{{ security['chroot'] }}" },
+
+        // Nofiles is a deprecated security feature which prevents cjdns from opening
+        // any files at all, using this will block setting of IP addresses and
+        // hot-adding ETHInterface devices but for users who do not need this, it
+        // provides a formidable sandbox.
+        // Default: disabled
+        { "nofiles": {{ security['nofiles'] }} },
+
+        // Noforks will prevent cjdns from spawning any new processes or threads,
+        // this prevents many types of exploits from attacking the wider system.
+        // Default: enabled
+        { "noforks": {{ security['noforks'] }} },
+
+        // Seccomp is the most advanced sandboxing feature in cjdns, it uses
+        // SECCOMP_BPF to filter the system calls which cjdns is able to make on a
+        // linux system, strictly limiting it's access to the outside world
+        // This will fail quietly on any non-linux system
+        // Default: enabled
+        { "seccomp": {{ security['seccomp'] }} },
+
+        // The client sets up the core using a sequence of RPC calls, the responses
+        // to these calls are verified but in the event that the client crashes
+        // setup of the core completes, it could leave the core in an insecure state
+        // This call constitutes the client telling the core that the security rules
+        // have been fully applied and the core may run. Without it, the core will
+        // exit within a few seconds with return code 232.
+        // Default: enabled
+        { "setupComplete": {{ security['setupComplete'] }} }
+    ],
+
+    // Logging
+    "logging":
+    {
+        // Uncomment to have cjdns log to stdout rather than making logs available
+        // via the admin socket.
+{% if logging['logTo'] != None %}
+        "logTo":"{{ logging['logTo'] }}"
+{% else %}
+        // "logTo":"stdout"
+{% endif %}
+    },
+
+    // If set to non-zero, cjdns will not fork to the background.
+    // Recommended for use in conjunction with "logTo":"stdout".
+    "noBackground":{{ noBackground }},
+}

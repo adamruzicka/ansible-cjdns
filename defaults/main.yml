@@ -1,0 +1,25 @@
+---
+cjdns_config_path: /etc/cjdroute.conf
+
+authorizedPasswords: []
+admin: {}
+interfaces:
+  UDPInterface: []
+  ETHInterface: []
+router:
+  interface: 
+    type: TUNInterface
+  ipTunnel:
+    allowedConnections: []
+    outgoingConnections: []
+security:
+  setuser: nobody
+  keepNetAdmin: 1
+  chroot: /var/run/
+  nofiles: 0
+  noforks: 1
+  seccomp: 1
+  setupComplete: 1
+logging:
+  logTo:
+noBackground: 0

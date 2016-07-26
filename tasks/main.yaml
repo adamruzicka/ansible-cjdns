@@ -1,0 +1,17 @@
+---
+- name: Install CJDNS
+  package: name=cjdns state=installed
+  tags: install
+
+- name: Enable CJDNS service
+  service: name=cjdns enabled=yes
+  tags: install
+
+- name: Configure CJDNS
+  template: src=cjdroute.conf.j2 dest={{ cjdns_config_path }}
+  register: configuration
+  tags: configure
+
+- name: (Re)start CJDNS service
+  service: name=cjdns state=restarted
+  when: configuration | changed
