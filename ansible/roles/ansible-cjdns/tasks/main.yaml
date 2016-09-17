@@ -1,4 +1,7 @@
 ---
+- name: Enable EPEL
+  package: name=epel-release state=installed
+
 - name: Install CJDNS
   package: name=cjdns state=installed
   tags: install
@@ -6,6 +9,7 @@
 - name: Enable CJDNS service
   service: name=cjdns enabled=yes
   tags: install
+  when: ansible_virtualization_role != 'guest' and ansible_virtualization_type != 'docker'
 
 - name: Configure CJDNS
   template: src=cjdroute.conf.j2 dest={{ cjdns_config_path }}
@@ -14,4 +18,4 @@
 
 - name: (Re)start CJDNS service
   service: name=cjdns state=restarted
-  when: configuration | changed
+  when: ansible_virtualization_role != 'guest' and ansible_virtualization_type != 'docker' and (configuration | changed)

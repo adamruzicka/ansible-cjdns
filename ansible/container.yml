@@ -1,0 +1,17 @@
+version: "1"
+services:
+  cjdns:
+    image: centos:7
+    ports:
+      - "22222:22222" # The port UPDInterface binds to
+      - "11234" # The admin port
+    cap_add:
+      - NET_ADMIN # Needed for the tun magic
+    devices:
+      - "/dev/net/tun" # Needed for the tun magic
+    command: sh -c "cjdroute --nobg < /etc/cjdroute.conf"
+registries: {}
+  # Add optional registries used for deployment. For example:
+  #  google:
+  #    url: https://gcr.io
+  #    namespace: my-cool-project-xxxxxx   

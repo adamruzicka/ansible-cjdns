@@ -96,10 +96,8 @@
 {% for ip, params in interface['connectTo'].iteritems() %}
 {% if params['publicKey'] != publicKey %}
                     "{{ ip }}": {
-{% for key in ['login', 'peerName', 'password', 'publicKey'] %}
-{% if params[key] is defined %}
+{% for key,value in params.iteritems() %}
                         "{{ key }}": "{{ params[key] }}"{% if not loop.last %},{% endif %}
-{% endif %}
 
 {% endfor %}
                     }{% if not loop.last %},{% endif %}
