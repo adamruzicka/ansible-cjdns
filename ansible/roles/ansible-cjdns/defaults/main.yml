@@ -1,5 +1,6 @@
 ---
 cjdns_config_path: /etc/cjdroute.conf
+cjdns_autogenerate_config: false
 
 authorizedPasswords: []
 admin: {}

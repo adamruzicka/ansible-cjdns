@@ -11,11 +11,18 @@
   tags: install
   when: ansible_virtualization_role != 'guest' and ansible_virtualization_type != 'docker'
 
+- name: Autoconfigure CJDNS
+  shell:
+    creates: "{{ cjdns_config_path }}"
+    cmd: cjdroute --genconf > {{ cjdns_config_path }}
+  when: cjdns_autogenerate_config
+
 - name: Configure CJDNS
   template: src=cjdroute.conf.j2 dest={{ cjdns_config_path }}
   register: configuration
   tags: configure
+  when: not cjdns_autogenerate_config
 
 - name: (Re)start CJDNS service
   service: name=cjdns state=restarted
-  when: ansible_virtualization_role != 'guest' and ansible_virtualization_type != 'docker' and (configuration | changed)
+  # when: ansible_virtualization_role != 'guest' and ansible_virtualization_type != 'docker' and (cjdns_autogenerate_config or (configuration | changed))
